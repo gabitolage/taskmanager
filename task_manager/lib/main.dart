@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'services/camera_service.dart';
 import 'screens/task_list_screen.dart';
 
-void main() {
+void main() async {
   // Inicializar o sqflite ffi para Windows
+  WidgetsFlutterBinding.ensureInitialized();
+  await CameraService.instance.initialize();
   _initializeDatabase();
   runApp(const MyApp());
 }

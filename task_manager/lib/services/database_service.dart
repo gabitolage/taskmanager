@@ -1,7 +1,7 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import '../models/task.dart';
-import '../models/category.dart'; // Nova importação
+import '../models/category.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -25,7 +25,7 @@ class DatabaseService {
       
       return await openDatabase(
         path,
-        version: 2, // Incrementar versão
+        version: 4,
         onCreate: _createDB,
         onUpgrade: _upgradeDB, // Adicionar upgrade
       );
@@ -58,6 +58,12 @@ class DatabaseService {
         dueDate TEXT,
         categoryId TEXT,
         FOREIGN KEY (categoryId) REFERENCES categories (id)
+        photoPath TEXT,
+        completedAt TEXT,
+        completedBy TEXT,
+        latitude REAL,
+        longitude REAL,
+        locationName TEXT
       )
     ''');
 
@@ -90,9 +96,19 @@ class DatabaseService {
       ''');
 
       // Adicionar coluna categoryId na tabela tasks
-      await db.execute('''
-        ALTER TABLE tasks ADD COLUMN categoryId TEXT
-      ''');
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN photoPath TEXT');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN completedAt TEXT');
+      await db.execute('ALTER TABLE tasks ADD COLUMN completedBy TEXT');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN latitude REAL');
+      await db.execute('ALTER TABLE tasks ADD COLUMN longitude REAL');
+      await db.execute('ALTER TABLE tasks ADD COLUMN locationName TEXT');
+    }
+    print('✅ Banco migrado de v$oldVersion para v$newVersion');
 
       // Inserir categorias padrão
       final defaultCategories = [
@@ -224,5 +240,30 @@ class DatabaseService {
     );
     print('Task deleted: $id');
     return result;
+  }
+
+    // Método especial: buscar tarefas por proximidade
+  Future<List<Task>> getTasksNearLocation({
+    required double latitude,
+    required double longitude,
+    double radiusInMeters = 1000,
+  }) async {
+    final allTasks = await readAll();
+    
+    return allTasks.where((task) {
+      if (!task.hasLocation) return false;
+      
+      // Cálculo de distância usando fórmula de Haversine (simplificada)
+      final latDiff = (task.latitude! - latitude).abs();
+      final lonDiff = (task.longitude! - longitude).abs();
+      final distance = ((latDiff * 111000) + (lonDiff * 111000)) / 2;
+      
+      return distance <= radiusInMeters;
+    }).toList();
+  }
+
+  Future close() async {
+    final db = await instance.database;
+    db.close();
   }
 }
