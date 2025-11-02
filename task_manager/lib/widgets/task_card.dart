@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/category.dart';
-import '../services/location_service.dart';
+import 'dart:io';
+
 
 class TaskCard extends StatelessWidget {
   final Task task;
@@ -10,7 +11,7 @@ class TaskCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
-  final Function(bool?) onCheckboxChanged;
+  final ValueChanged<bool?>? onCheckboxChanged;
 
   const TaskCard({
     super.key,
@@ -19,7 +20,7 @@ class TaskCard extends StatelessWidget {
     required this.onTap,
     required this.onToggle,
     required this.onDelete,
-    required this.onCheckboxChanged,
+    this.onCheckboxChanged,
   });
 
   Color _getPriorityColor() {
@@ -130,7 +131,13 @@ class TaskCard extends StatelessWidget {
                   // Checkbox
                   Checkbox(
                     value: task.completed,
-                    onChanged: (_) => onToggle(),
+                    onChanged: (val) {
+                      if (onCheckboxChanged != null) {
+                        onCheckboxChanged!(val);
+                      } else {
+                        onToggle();
+                      }
+                    },
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     ),
