@@ -43,6 +43,7 @@ dependencies:
   vibration: ^1.8.4              # Feedback tátil
   geolocator: ^10.1.0            # GPS
   geocoding: ^2.1.1              # Endereços
+  image_picker: ^0.8.7+4         # Seleção de imagens da galeria
 
 dev_dependencies:
   flutter_test:

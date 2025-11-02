@@ -109,6 +109,8 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageWidth = MediaQuery.of(context).size.width * 0.20; // 20% do width
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: task.completed ? 1 : 3,
@@ -348,25 +350,27 @@ class TaskCard extends StatelessWidget {
                                     color: Colors.blue.withOpacity(0.5),
                                   ),
                                 ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.photo_camera,
-                                      size: 14,
-                                      color: Colors.blue,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.photo_camera,
+                                          size: 14,
+                                          color: Colors.blue,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          task.photoPaths != null
+                                              ? 'Fotos (${task.photoPaths!.length})'
+                                              : 'Foto',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Foto',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
 
                             // Localização
@@ -445,6 +449,8 @@ class TaskCard extends StatelessWidget {
                   ),
 
                   const SizedBox(width: 8),
+                  // reserva espaço para a miniatura (não forçar sobreposição)
+                  SizedBox(width: imageWidth - 8),
 
                   // Botão Deletar
                   IconButton(
@@ -457,42 +463,47 @@ class TaskCard extends StatelessWidget {
               ),
             ),
           ),
-          // PREVIEW DA FOTO
+          // PREVIEW DA FOTO: miniatura à direita ocupando ~20% do card
           if (task.hasPhoto)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-              ),
-              child: Image.file(
-                File(task.photoPath!),
-                width: double.infinity,
-                height: 180,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 180,
-                    color: Colors.grey[200],
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.broken_image_outlined,
-                          size: 48,
-                          color: Colors.grey[400],
+            Positioned(
+              top: 12,
+              bottom: 12,
+              right: 12,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: imageWidth,
+                  color: Colors.grey[200],
+                  child: Image.file(
+                    File(task.firstPhotoPath!),
+                    width: imageWidth,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.broken_image_outlined,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Foto não encontrada',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Foto não encontrada',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           // Badge de vencida

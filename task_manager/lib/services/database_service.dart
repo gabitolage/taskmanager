@@ -25,7 +25,7 @@ class DatabaseService {
       
       return await openDatabase(
         path,
-        version: 4,
+        version: 5,
         onCreate: _createDB,
         onUpgrade: _upgradeDB, // Adicionar upgrade
       );
@@ -57,13 +57,14 @@ class DatabaseService {
         createdAt TEXT NOT NULL,
         dueDate TEXT,
         categoryId TEXT,
-        FOREIGN KEY (categoryId) REFERENCES categories (id)
+        photoPaths TEXT,
         photoPath TEXT,
         completedAt TEXT,
         completedBy TEXT,
         latitude REAL,
         longitude REAL,
-        locationName TEXT
+        locationName TEXT,
+        FOREIGN KEY (categoryId) REFERENCES categories (id)
       )
     ''');
 
@@ -94,8 +95,9 @@ class DatabaseService {
           createdAt TEXT NOT NULL
         )
       ''');
+    }
 
-      // Adicionar coluna categoryId na tabela tasks
+    // Migrations incremental
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE tasks ADD COLUMN photoPath TEXT');
     }
@@ -108,22 +110,26 @@ class DatabaseService {
       await db.execute('ALTER TABLE tasks ADD COLUMN longitude REAL');
       await db.execute('ALTER TABLE tasks ADD COLUMN locationName TEXT');
     }
+    if (oldVersion < 5) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN photoPaths TEXT');
+    }
+
     print('✅ Banco migrado de v$oldVersion para v$newVersion');
 
-      // Inserir categorias padrão
-      final defaultCategories = [
-        Category(name: 'Trabalho', color: Category.predefinedColors[2]),
-        Category(name: 'Pessoal', color: Category.predefinedColors[4]),
-        Category(name: 'Estudos', color: Category.predefinedColors[9]),
-        Category(name: 'Saúde', color: Category.predefinedColors[5]),
-        Category(name: 'Compras', color: Category.predefinedColors[10]),
-      ];
+    // Inserir categorias padrão caso necessárias
+    final defaultCategories = [
+      Category(name: 'Trabalho', color: Category.predefinedColors[2]),
+      Category(name: 'Pessoal', color: Category.predefinedColors[4]),
+      Category(name: 'Estudos', color: Category.predefinedColors[9]),
+      Category(name: 'Saúde', color: Category.predefinedColors[5]),
+      Category(name: 'Compras', color: Category.predefinedColors[10]),
+    ];
 
-      for (final category in defaultCategories) {
+    for (final category in defaultCategories) {
+      // Insert ignore if exists
+      try {
         await db.insert('categories', category.toMap());
-      }
-
-      print('Database upgraded to version 2');
+      } catch (_) {}
     }
   }
 

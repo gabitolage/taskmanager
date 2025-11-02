@@ -26,7 +26,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   bool _isLoading = false;
   List<Category> _categories = []; // Lista de categorias
     // CÂMERA
-  String? _photoPath;
+    List<String> _photoPaths = [];
   
   // GPS
   double? _latitude;
@@ -44,7 +44,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       _completed = widget.task!.completed;
       _dueDate = widget.task!.dueDate;
       _selectedCategoryId = widget.task!.categoryId;
-      _photoPath = widget.task!.photoPath;
+  _photoPaths = widget.task!.photoPaths ?? [];
       _latitude = widget.task!.latitude;
       _longitude = widget.task!.longitude;
       _locationName = widget.task!.locationName;
@@ -111,7 +111,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     final photoPath = await CameraService.instance.takePicture(context);
     
     if (photoPath != null && mounted) {
-      setState(() => _photoPath = photoPath);
+      setState(() => _photoPaths.add(photoPath));
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -122,17 +122,16 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       );
     }
   }
-
-  void _removePhoto() {
-    setState(() => _photoPath = null);
+  void _removePhotoAt(int index) {
+    final removed = _photoPaths.removeAt(index);
+    if (mounted) setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('🗑️ Foto removida')),
     );
   }
 
-  void _viewPhoto() {
-    if (_photoPath == null) return;
-    
+  void _viewPhotoAt(int index) {
+    final path = _photoPaths[index];
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -144,12 +143,26 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           ),
           body: Center(
             child: InteractiveViewer(
-              child: Image.file(File(_photoPath!), fit: BoxFit.contain),
+              child: Image.file(File(path), fit: BoxFit.contain),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickFromGallery() async {
+    final p = await CameraService.instance.pickFromGallery(context);
+    if (p != null && mounted) {
+      setState(() => _photoPaths.add(p));
+    }
+  }
+
+  Future<void> _pickMultipleFromGallery() async {
+    final list = await CameraService.instance.pickMultipleFromGallery(context);
+    if (list.isNotEmpty && mounted) {
+      setState(() => _photoPaths.addAll(list));
+    }
   }
 
   // GPS METHODS
@@ -199,7 +212,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     setState(() => _isLoading = true);
 
     try {
-      if (widget.task == null) {
+        if (widget.task == null) {
         // Criar nova tarefa
         final newTask = Task(
           title: _titleController.text.trim(),
@@ -208,7 +221,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           completed: _completed,
           dueDate: _dueDate,
           categoryId: _selectedCategoryId,
-          photoPath: _photoPath,
+          photoPaths: _photoPaths,
           latitude: _latitude,
           longitude: _longitude,
           locationName: _locationName,
@@ -232,7 +245,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           completed: _completed,
           dueDate: _dueDate,
           categoryId: _selectedCategoryId,
-          photoPath: _photoPath,
+          photoPaths: _photoPaths,
           latitude: _latitude,
           longitude: _longitude,
           locationName: _locationName,
@@ -557,65 +570,110 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // SEÇÃO FOTO
+                    // SEÇÃO FOTO (suporta múltiplas imagens)
                     Row(
                       children: [
                         const Icon(Icons.photo_camera, color: Colors.blue),
                         const SizedBox(width: 8),
                         const Text(
-                          'Foto',
+                          'Fotos',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const Spacer(),
-                        if (_photoPath != null)
+                        if (_photoPaths.isNotEmpty)
                           TextButton.icon(
-                            onPressed: _removePhoto,
+                            onPressed: () {
+                              setState(() => _photoPaths.clear());
+                            },
                             icon: const Icon(Icons.delete_outline, size: 18),
-                            label: const Text('Remover'),
+                            label: const Text('Remover todas'),
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.red,
                             ),
                           ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 12),
-                    
-                    if (_photoPath != null)
-                      GestureDetector(
-                        onTap: _viewPhoto,
-                        child: Container(
-                          height: 200,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              File(_photoPath!),
-                              width: double.infinity,
-                              fit: BoxFit.cover,
+
+                    // Botões de adicionar
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _takePicture,
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Tirar Foto'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.all(12),
                             ),
                           ),
                         ),
-                      )
-                    else
-                      OutlinedButton.icon(
-                        onPressed: _takePicture,
-                        icon: const Icon(Icons.camera_alt),
-                        label: const Text('Tirar Foto'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.all(16),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _pickFromGallery,
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text('Galeria'),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _pickMultipleFromGallery,
+                          icon: const Icon(Icons.collections),
+                          label: const Text('Várias'),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    if (_photoPaths.isNotEmpty)
+                      SizedBox(
+                        height: 120,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _photoPaths.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final p = _photoPaths[index];
+                            return Stack(
+                              children: [
+                                GestureDetector(
+                                  onTap: () => _viewPhotoAt(index),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      File(p),
+                                      width: 160,
+                                      height: 110,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => Container(
+                                        width: 160,
+                                        height: 110,
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.broken_image),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor: Colors.black54,
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(Icons.close, size: 16, color: Colors.white),
+                                      onPressed: () => _removePhotoAt(index),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     

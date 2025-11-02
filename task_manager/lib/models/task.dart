@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 class Task {
@@ -9,8 +10,8 @@ class Task {
   final DateTime createdAt;
   final DateTime? dueDate;
   final String? categoryId; // Nova propriedade
-// CÂMERA
-  final String? photoPath;
+  // CÂMERA
+  final List<String>? photoPaths;
   
   // SENSORES
   final DateTime? completedAt;
@@ -30,7 +31,7 @@ class Task {
     DateTime? createdAt,
     this.dueDate,
     this.categoryId, // Novo parâmetro
-    this.photoPath,
+  this.photoPaths,
     this.completedAt,
     this.completedBy,
     this.latitude,
@@ -40,7 +41,8 @@ class Task {
        createdAt = createdAt ?? DateTime.now();
 
          // Getters auxiliares
-  bool get hasPhoto => photoPath != null && photoPath!.isNotEmpty;
+  bool get hasPhoto => (photoPaths != null && photoPaths!.isNotEmpty);
+  String? get firstPhotoPath => (photoPaths != null && photoPaths!.isNotEmpty) ? photoPaths!.first : null;
   bool get hasLocation => latitude != null && longitude != null;
   bool get wasCompletedByShake => completedBy == 'shake';
 
@@ -54,7 +56,9 @@ class Task {
       'createdAt': createdAt.toIso8601String(),
       'dueDate': dueDate?.toIso8601String(),
       'categoryId': categoryId, // Salvar no banco
-      'photoPath': photoPath,
+  'photoPaths': photoPaths != null ? jsonEncode(photoPaths) : null,
+  // backward compat
+  'photoPath': photoPaths != null && photoPaths!.isNotEmpty ? photoPaths!.first : null,
       'completedAt': completedAt?.toIso8601String(),
       'completedBy': completedBy,
       'latitude': latitude,
@@ -73,7 +77,9 @@ class Task {
       createdAt: DateTime.parse(map['createdAt']),
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
       categoryId: map['categoryId'], // Carregar do banco
-      photoPath: map['photoPath'] as String?,
+    photoPaths: map['photoPaths'] != null
+      ? List<String>.from(jsonDecode(map['photoPaths'] as String))
+      : (map['photoPath'] != null ? [map['photoPath'] as String] : null),
       completedAt: map['completedAt'] != null 
           ? DateTime.parse(map['completedAt'] as String)
           : null,
@@ -91,7 +97,7 @@ class Task {
     String? priority,
     DateTime? dueDate,
     String? categoryId, // Novo campo no copyWith
-    String? photoPath,
+  List<String>? photoPaths,
     DateTime? completedAt,
     String? completedBy,
     double? latitude,
@@ -107,7 +113,7 @@ class Task {
       createdAt: createdAt,
       dueDate: dueDate ?? this.dueDate,
       categoryId: categoryId ?? this.categoryId,
-      photoPath: photoPath ?? this.photoPath,
+  photoPaths: photoPaths ?? this.photoPaths,
       completedAt: completedAt ?? this.completedAt,
       completedBy: completedBy ?? this.completedBy,
       latitude: latitude ?? this.latitude,

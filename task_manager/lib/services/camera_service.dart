@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../screens/camera_screen.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CameraService {
   static final CameraService instance = CameraService._init();
@@ -70,6 +71,48 @@ class CameraService {
       return null;
     } finally {
       controller.dispose();
+    }
+  }
+
+  // Selecionar uma imagem da galeria
+  Future<String?> pickFromGallery(BuildContext context) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return null;
+      return await savePicture(image);
+    } catch (e) {
+      print('❌ Erro ao selecionar imagem da galeria: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao selecionar imagem: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return null;
+    }
+  }
+
+  // Selecionar múltiplas imagens da galeria
+  Future<List<String>> pickMultipleFromGallery(BuildContext context) async {
+    final List<String> savedPaths = [];
+    try {
+      final picker = ImagePicker();
+      final List<XFile>? images = await picker.pickMultiImage();
+      if (images == null || images.isEmpty) return savedPaths;
+
+      for (final img in images) {
+        final saved = await savePicture(img);
+        savedPaths.add(saved);
+      }
+      return savedPaths;
+    } catch (e) {
+      print('❌ Erro ao selecionar imagens: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao selecionar imagens: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return savedPaths;
     }
   }
 
